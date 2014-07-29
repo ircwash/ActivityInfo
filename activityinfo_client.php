@@ -18,7 +18,7 @@ class activityinfo_client
         curl_setopt($this->ch, CURLOPT_TIMEOUT, 30);
         
         //timeout after 30 seconds
-        curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($this->ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
         curl_setopt($this->ch, CURLOPT_USERPWD, "$username:$password");
     }
@@ -75,8 +75,13 @@ class activityinfo_client
      */
     public function callCommand($type, $properties) {
         $data = array('type' => $type, 'command' => array('properties' => $properties));
+        $dataString = json_encode($data);                                                                                   
         curl_setopt($this->ch, CURLOPT_POST, true);
-        curl_setopt($this->ch, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($this->ch, CURLOPT_POSTFIELDS, $dataString);
+        curl_setopt($this->ch, CURLOPT_HTTPHEADER, array(                                                                          
+            'Content-Type: application/json',                                                                                
+            'Content-Length: ' . strlen($dataString))                                                                       
+        );                                                                                                                   
         $this->setPath('command');
         return $this->exec();
     }
