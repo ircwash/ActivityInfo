@@ -7,14 +7,14 @@ $ai = new activityinfo_client($ini['username'], $ini['password']);
 
 $databases = $ai->getDatabase(1383);
 
-print_r( $databases );
+//print_r( $databases );
 
 // foreach ($databases as $database) {
 //     print_r($database);
 //     print_r($ai->getDatabase($database['id']));
 // }
 
-// print_r( $ai->getSites($ini['partner']));
+print_r( $ai->getSitesGeo(array( 'partner' => $ini['partner'])));
 
 // print_r( $ai->getAdminLevels( 'NL'));
 // print_r( $ai->getEntities( 1403));
