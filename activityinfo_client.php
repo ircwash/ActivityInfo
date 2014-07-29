@@ -22,20 +22,53 @@ class activityinfo_client
         curl_setopt($this->ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
         curl_setopt($this->ch, CURLOPT_USERPWD, "$username:$password");
     }
-    
-    public function makeRequest($path, $params = array()) {
-    	$fullPath = $this->baseUrl . $path;
-    	if( count($params) > 0 ) {
-    		$fullPath .= '?' . http_build_query( $params );
-    	}
-    	printf( "%s\n", $fullPath);
+
+    /**
+     * set the path for the request, by prepending path with the base url and adding params as query
+     * @param string $path   path name relative to base url
+     * @param array  $params optional list of parameters
+     */
+    protected function setPath( $path, $params = array()) {
+        $fullPath = $this->baseUrl . $path;
+        if( count($params) > 0 ) {
+            $fullPath .= '?' . http_build_query( $params );
+        }
+        printf( "%s\n", $fullPath);
         curl_setopt($this->ch, CURLOPT_URL, $fullPath);
-        $result = curl_exec($this->ch);
-        $status = curl_getinfo($this->ch, CURLINFO_HTTP_CODE);
-        return json_decode($result, true);
     }
     
-    public function
+    /**
+     * Execute the request, report status if not OK, otherwise return result, decode if JSON
+     * @param  string $path path name relative to base url
+     * @return [mixed]       result from request
+     */
+    protected function exec( $path) {
+        $result = curl_exec($this->ch);
+        $status = curl_getinfo($this->ch, CURLINFO_HTTP_CODE);
+        if( $status != 200 ) {
+            printf( "HTTP Status code: %s\n", $status );
+            return false;
+        }
+        if( preg_match( 'json',curl_getinfo($this->ch, CURLINFO_CONTENT_TYPE))) {
+            $result =  json_decode($result, true);
+        }
+        return $result;
+    }
+
+    protected function makeRequest($path, $params = array(), $type='GET') {
+        curl_setopt($this->ch, CURLOPT_HTTPGET, true);
+        $this->setPath( $path, $params );
+        return $this->exec();
+    }
+    
+    public function callCommand($type, $properties) {
+        $data = array( 'type' => $type, 'command' => array('properties' => $properties));
+        curl_setopt($this->ch, CURLOPT_POST, true);
+        curl_setopt($this->ch, CURLOPT_POSTFIELDS, $data);
+        $this->setPath( 'command' );
+        return $this->exec();
+    }
+
 
     public function getDatabases() {
         return $this->makeRequest('resources/databases');
