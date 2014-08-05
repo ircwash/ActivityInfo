@@ -1,23 +1,34 @@
 <?php
+
+ini_set( 'display_errors', true);
 require_once ('activityinfo_client.php');
+require_once ('activityinfo_activity.php');
 
 $ini = parse_ini_file('import.ini');
 
-$ai = new activityinfo_client($ini['username'], $ini['password']);
+$client = new activityinfo_client($ini['username'], $ini['password']);
 
-$databases = $ai->getDatabase(1383);
+$activity = new activityinfo_activity( $client, $ini['database'], $ini['activity'] );
 
-//print_r( $databases );
+$properties = array(
+	'activityId' => $activity->id,
+	'partnerId' => 16,				 	// IRC
+	'locationId' => 199381355,			// Netherlands
+	// 'startDate' => '2014-01-01',
+	// 'endDate' => '2014-06-30'
+);
 
-// foreach ($databases as $database) {
-//     print_r($database);
-//     print_r($ai->getDatabase($database['id']));
-// }
+$data = array(
+	'Staff member' => 'Harry',
+	'Project' => 'C14.09 Communications',
+	'Hours spent' => 7,
+	'Hourly rate' => 100
+);
 
-print_r( $ai->getSitesGeo(array( 'partner' => $ini['partner'])));
+// Add this site
+$activity->addSite( $data, $properties);
 
-// print_r( $ai->getAdminLevels( 'NL'));
-// print_r( $ai->getEntities( 1403));
-// print_r( $ai->getLocations( 1317));
+// Try creating attribute
+print_r( $activity->getAttributeId( 'Staff member', 'Harry Oosterveen'));
 
 ?>

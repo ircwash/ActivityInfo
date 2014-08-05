@@ -8,19 +8,15 @@
 
 class activityinfo_client
 {
-    var $baseUrl, $username, $password, $ch, $jsonOptions = JSON_PRETTY_PRINT;
-    
+    var $baseUrl, $username, $password, $ch, $f, $activityAttributes = array();
+
     public function __construct($username, $password, $baseUrl = "https://www.activityinfo.org/") {
         $this->baseUrl = $baseUrl;
         
         // Init curl channel
         $this->ch = curl_init();
-        curl_setopt($this->ch, CURLOPT_TIMEOUT, 30);
-        
-        //timeout after 30 seconds
-        curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($this->ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($this->ch, CURLOPT_USERPWD, "$username:$password");
+        $this->f = fopen('request.txt', 'w');
+        curl_setopt_array($this->ch, array(CURLOPT_TIMEOUT => 30, CURLOPT_HTTPAUTH => CURLAUTH_BASIC, CURLOPT_USERPWD => "$username:$password", CURLOPT_RETURNTRANSFER => 1, CURLOPT_FOLLOWLOCATION => 1, CURLOPT_VERBOSE => 1, CURLOPT_STDERR => $this->f));
     }
     
     /**
@@ -42,7 +38,7 @@ class activityinfo_client
      * @param  string $path path name relative to base url
      * @return [mixed]       result from request
      */
-    protected function exec($path) {
+    protected function exec() {
         $result = curl_exec($this->ch);
         $status = curl_getinfo($this->ch, CURLINFO_HTTP_CODE);
         if ($status != 200) {
@@ -52,6 +48,7 @@ class activityinfo_client
         if (preg_match('/json/', curl_getinfo($this->ch, CURLINFO_CONTENT_TYPE))) {
             $result = json_decode($result, true);
         }
+        fprintf( $this->f, "%s\n", str_repeat( '=', 40));
         return $result;
     }
     
@@ -69,19 +66,17 @@ class activityinfo_client
     
     /**
      * Call a command using type and parameters -- need to find documentation
-     * @param  string $type       [description]
-     * @param  array $properties [description]
+     * @param  string $type      type of command
+     * @param  array $params     command parameters array, including 'properties' attribute
      * @return [mixed]             [description]
      */
-    public function callCommand($type, $properties) {
-        $data = array('type' => $type, 'command' => array('properties' => $properties));
-        $dataString = json_encode($data);                                                                                   
-        curl_setopt($this->ch, CURLOPT_POST, true);
+    public function callCommand($type, $params) {
+        $data = array('type' => $type, 'command' => $params);
+        $dataString = json_encode($data, JSON_PRETTY_PRINT);
+        fprintf($this->f, "DATA:\n%s\n%s\n", $dataString, str_repeat( '-', 40));
+        curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($this->ch, CURLOPT_POSTFIELDS, $dataString);
-        curl_setopt($this->ch, CURLOPT_HTTPHEADER, array(                                                                          
-            'Content-Type: application/json',                                                                                
-            'Content-Length: ' . strlen($dataString))                                                                       
-        );                                                                                                                   
+        curl_setopt($this->ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json', 'Content-Length: ' . strlen($dataString)));
         $this->setPath('command');
         return $this->exec();
     }
@@ -107,7 +102,7 @@ class activityinfo_client
     /**
      * List all sites for a partner, activities,...
      * @param  array   $params  associative array to filter by partner, activity, indicator or attribute
-     * @param  boolean $include_monthly_reports 
+     * @param  boolean $include_monthly_reports
      * @return array of sites
      */
     public function getSites($params = array(), $include_monthly_reports = true) {
